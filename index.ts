@@ -44,6 +44,12 @@ app.get('/register', (req: Request, res: Response) => {
     );
 });
 
+app.get('/phones', (req: Request, res: Response) => {
+    db.all('SELECT * FROM phones WHERE owner_id = ?', req.query.ownerId, (_err: Error | null, rows: unknown[]) => {
+        res.send(rows);
+    });
+});
+
 app.listen(port, () => {
     console.log(`[server] Server is running at http://localhost:${port}`);
 });
