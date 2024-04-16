@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS owners (
 CREATE TABLE IF NOT EXISTS phones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id INTEGER REFERENCES owners(id) ON DELETE CASCADE,
-    nickname TEXT NOT NULL
+    nickname TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'IDLE'
 );
 `)
 
@@ -47,6 +48,18 @@ app.get('/register', (req: Request, res: Response) => {
 app.get('/phones', (req: Request, res: Response) => {
     db.all('SELECT * FROM phones WHERE owner_id = ?', req.query.ownerId, (_err: Error | null, rows: unknown[]) => {
         res.send(rows);
+    });
+});
+
+app.get('/nickname', (req: Request, res: Response) => {
+    db.run('UPDATE phones SET nickname = ? WHERE id = ?', req.query.nickname, req.query.phoneId, function (this: RunResult, _err: Error | null) {
+        res.send('');
+    });
+});
+
+app.get('/status', (req: Request, res: Response) => {
+    db.run('UPDATE phones SET status = ? WHERE id = ?', req.query.status, req.query.phoneId, function (this: RunResult, _err: Error | null) {
+        res.send('');
     });
 });
 
