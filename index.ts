@@ -1,7 +1,8 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
+import expressWs from 'express-ws';
 import { Database, RunResult } from 'sqlite3';
 
-const app: Express = express();
+const app = expressWs(express()).app;
 const port = 8500;
 
 const db = new Database('db.sqlite');
@@ -57,9 +58,11 @@ app.get('/nickname', (req: Request, res: Response) => {
     });
 });
 
-app.get('/status', (req: Request, res: Response) => {
-    db.run('UPDATE phones SET status = ? WHERE id = ?', req.query.status, req.query.phoneId, function (this: RunResult, _err: Error | null) {
-        res.send('');
+app.ws('/loot', (ws: { on: (arg0: string, arg1: (msg: any) => void) => void; send: (arg0: any) => void; }, req: any) => {
+    const setStatus = (status: String) => db.run('UPDATE phones SET status = ? WHERE id = ?', status, req.query.phoneId);
+    setStatus('ACTIVE')
+    ws.on('close', code => {
+        setStatus(code === 1000 ? 'IDLE' : 'ERROR')
     });
 });
 
