@@ -53,6 +53,10 @@ let workers: Worker[] = [];
 
 function assignInvocation(invocation: Invocation) {
     const activeWorkers = workers.filter(worker => worker.active);
+    if (activeWorkers.length === 0) {
+        invocation.callback('No phones available');
+        return;
+    }
     activeWorkers.sort((a, b) => a.queue.size() - b.queue.size());
     const assignedWorker = activeWorkers[0];
     assignedWorker.queue.add(invocation);
