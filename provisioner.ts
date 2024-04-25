@@ -16,8 +16,10 @@ axios.post(`${HUB_URL}/upload?name=prime&method=isPrime`, code, { headers: { 'Co
         for (let n = 0; n < 100; n++) {
             axios.get(`${HUB_URL}/invoke?name=prime&args=${n}`)
                 .then(res => {
-                    if (res.data) {
+                    if (res.data == true) {
                         console.log(n);
+                    } else if (res.data != false) {
+                        console.log(res.data)
                     }
                 });
         }
