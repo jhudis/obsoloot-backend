@@ -52,9 +52,10 @@ class Worker {
 let workers: Worker[] = [];
 
 function assignInvocation(invocation: Invocation) {
-    workers.sort((a, b) => a.queue.size() - b.queue.size());
-    let worker = workers[0];
-    worker.queue.add(invocation);
+    const activeWorkers = workers.filter(worker => worker.active);
+    activeWorkers.sort((a, b) => a.queue.size() - b.queue.size());
+    const assignedWorker = activeWorkers[0];
+    assignedWorker.queue.add(invocation);
 }
 
 app.use(express.text())
@@ -113,9 +114,9 @@ app.ws('/loot', (ws: { on: (arg0: string, arg1: (msg: any) => void) => void; sen
         worker = workers.slice(-1)[0];
     }
     let invoking = false;
-    let interval = setInterval(() => {
+    const interval = setInterval(() => {
         if (worker.queue.isEmpty() || invoking) return;
-        let invocation = worker.queue.peek();
+        const invocation = worker.queue.peek();
         ws.send(invocation?.name);
         ws.send(invocation?.args);
         invoking = true;
@@ -129,7 +130,7 @@ app.ws('/loot', (ws: { on: (arg0: string, arg1: (msg: any) => void) => void; sen
         }
     });
     ws.on('message', msg => {
-        let invocation = worker.queue.dequeue();
+        const invocation = worker.queue.dequeue();
         invocation?.callback(msg);
         invoking = false;
     });
