@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 
 const HUB_URL = 'https://berrysmart.games'
+const TRIAL_MS = 5000
 
 const code = `
     boolean isPrime(int n) {
@@ -11,24 +12,48 @@ const code = `
     }
 `
 
-const N = 100;
-let completed = 0;
+function getRandomInt(min: number, max: number) {
+    const minCeiled = Math.ceil(min);
+    const maxFloored = Math.floor(max);
+    return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled);
+}
 
-console.time('find-primes');
+interface TimedConfig extends InternalAxiosRequestConfig {
+    start: number
+    duration: number
+}
+
+axios.interceptors.request.use(
+    config => ({ ...config, start: performance.now() }),
+    error => Promise.reject(error)
+);
+  
+axios.interceptors.response.use(
+    response => ({ ...response, config: { ...response.config, duration: parseFloat((performance.now() - (response.config as TimedConfig).start).toFixed(4)) }}),
+    error => Promise.reject(error)
+);
+
 axios.post(`${HUB_URL}/upload?name=prime&method=isPrime`, code, { headers: { 'Content-Type': 'text/plain' } })
-    .then(_res => {
-        for (let n = 0; n < N; n++) {
-            axios.get(`${HUB_URL}/invoke?name=prime&args=${n}`)
-                .then(res => {
-                    if (res.data == true) {
-                        console.log(n);
-                    } else if (res.data != false) {
-                        console.log(res.data)
-                    }
-                    completed++;
-                    if (completed === N) {
-                        console.timeEnd('find-primes');
-                    }
-                });
-        }
-    });
+    .then(_res => runTrial(1));
+
+function setIntervalImmediate(callback: () => void, delay: number) {
+    callback();
+    return setInterval(callback, delay);
+}
+
+function runTrial(throughput: number) {
+    const latencies: number[] = [];
+    const requestProcess = setIntervalImmediate(() =>
+        axios.get(`${HUB_URL}/invoke?name=prime&args=${getRandomInt(10000, 100000)}`)
+            .then(res => latencies.push((res.config as TimedConfig).duration)),
+        TRIAL_MS / throughput
+    );
+    setTimeout(() => {
+        clearInterval(requestProcess);
+        latencies.sort((a, b) => a - b);
+        const medianLatency = latencies[Math.floor(latencies.length * 0.5)];
+        const tailLatency = latencies[Math.floor(latencies.length * 0.9)];
+        console.log(`Throughput: ${throughput} requests/second, Median Latency: ${medianLatency} ms, Tail Latency: ${tailLatency} ms`);
+        runTrial(throughput * 2);
+    }, TRIAL_MS);
+}
