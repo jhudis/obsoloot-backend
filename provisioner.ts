@@ -1,6 +1,8 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
+let MODE = 'GCF'
 const HUB_URL = 'https://berrysmart.games'
+const GCF_URL = 'https://us-central1-obsoloot.cloudfunctions.net'
 const TRIAL_MS = 5000
 
 const code = `
@@ -33,8 +35,12 @@ axios.interceptors.response.use(
     error => Promise.reject(error)
 );
 
-axios.post(`${HUB_URL}/upload?name=prime&method=isPrime`, code, { headers: { 'Content-Type': 'text/plain' } })
-    .then(_res => runTrial(1));
+if (MODE === 'HUB') {
+    axios.post(`${HUB_URL}/upload?name=prime&method=isPrime`, code, { headers: { 'Content-Type': 'text/plain' } })
+        .then(_res => runTrial(1));
+} else {
+    runTrial(1);
+}
 
 function setIntervalImmediate(callback: () => void, delay: number) {
     callback();
@@ -44,7 +50,7 @@ function setIntervalImmediate(callback: () => void, delay: number) {
 function runTrial(throughput: number) {
     const latencies: number[] = [];
     const requestProcess = setIntervalImmediate(() =>
-        axios.get(`${HUB_URL}/invoke?name=prime&args=${getRandomInt(10000, 100000)}`)
+        axios.get(`${MODE === 'HUB' ? HUB_URL : GCF_URL}/invoke?name=prime&args=${getRandomInt(10000, 100000)}`)
             .then(res => latencies.push((res.config as TimedConfig).duration)),
         TRIAL_MS / throughput
     );
@@ -53,7 +59,7 @@ function runTrial(throughput: number) {
         latencies.sort((a, b) => a - b);
         const medianLatency = latencies[Math.floor(latencies.length * 0.5)];
         const tailLatency = latencies[Math.floor(latencies.length * 0.9)];
-        console.log(`Throughput: ${throughput} requests/second, Median Latency: ${medianLatency} ms, Tail Latency: ${tailLatency} ms`);
+        console.log(`Throughput: ${throughput} requests/second, Median Latency: ${medianLatency} ms, Tail Latency: ${tailLatency} ms, Responses: ${latencies.length}`);
         runTrial(throughput * 2);
     }, TRIAL_MS);
 }
